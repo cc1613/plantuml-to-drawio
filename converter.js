@@ -719,6 +719,22 @@ class DrawioGenerator {
         this.data = parsedData;
         this.nodePositions = new Map();
         this.cellId = 2;
+        this.idPrefix = this.generateIdPrefix();
+    }
+
+    // Generate random prefix like draw.io does
+    generateIdPrefix() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < 20; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
+    // Get next unique ID in draw.io format
+    nextId() {
+        return `${this.idPrefix}-${this.cellId++}`;
     }
 
     // Helper: create vertex mxCell with correct attribute order (matching draw.io export)
@@ -765,7 +781,7 @@ class DrawioGenerator {
             let swimlaneX = 20;
             const swimlaneHeight = 100 + this.data.activities.length * spacing;
             for (const swimlane of this.data.swimlanes) {
-                const id = this.cellId++;
+                const id = this.nextId();
                 const fillColor = swimlane.color || '#f5f5f5';
                 xml += `        <mxCell id="${id}" value="${this.escapeXml(swimlane.label)}" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=${fillColor};strokeColor=#666666;startSize=30;" vertex="1" parent="1">
           <mxGeometry x="${swimlaneX}" y="${startY}" width="${swimlaneWidth}" height="${swimlaneHeight}" as="geometry"/>
@@ -790,7 +806,7 @@ class DrawioGenerator {
         
         for (const activity of this.data.activities) {
             if (activity.type === 'else_marker' || activity.type === 'elseif_marker') continue;
-            const id = this.cellId++;
+            const id = this.nextId();
             const y = yPositions.get(activity.id);
             let x = 150;
             if (hasSwimlanes && activity.swimlane !== null && this.data.swimlanes[activity.swimlane]) {
@@ -808,7 +824,7 @@ class DrawioGenerator {
                     xml += `        <mxCell id="${id}" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;strokeWidth=3;" vertex="1" parent="1">
           <mxGeometry x="${x + nodeWidth/2 - 15}" y="${y}" width="30" height="30" as="geometry"/>
         </mxCell>\n`;
-                    xml += `        <mxCell id="${this.cellId++}" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+                    xml += `        <mxCell id="${this.nextId()}" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
           <mxGeometry x="${x + nodeWidth/2 - 20}" y="${y - 5}" width="40" height="40" as="geometry"/>
         </mxCell>\n`;
                     break;
@@ -818,7 +834,7 @@ class DrawioGenerator {
           <mxGeometry x="${x}" y="${y}" width="${width}" height="${nodeHeight}" as="geometry"/>
         </mxCell>\n`;
                     if (activity.note) {
-                        xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(activity.note)}" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;size=14;align=left;spacingLeft=5;fontSize=10;" vertex="1" parent="1">
+                        xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(activity.note)}" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;size=14;align=left;spacingLeft=5;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="${x + width + 20}" y="${y - 10}" width="140" height="60" as="geometry"/>
         </mxCell>\n`;
                     }
@@ -845,7 +861,7 @@ class DrawioGenerator {
             const source = this.nodePositions.get(rel.from);
             const target = this.nodePositions.get(rel.to);
             if (source && target) {
-                xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(rel.label || '')}" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+                xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(rel.label || '')}" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="${source.x}" y="${source.y + 20}" as="sourcePoint"/>
             <mxPoint x="${target.x}" y="${target.y - 20}" as="targetPoint"/>
@@ -868,7 +884,7 @@ class DrawioGenerator {
         // Participants (rectangles at top)
         this.data.participants.forEach((p, index) => {
             const x = 50 + index * participantSpacing;
-            const id = this.cellId++;
+            const id = this.nextId();
             this.nodePositions.set(p.name, { id, x: x + participantWidth/2, topY: y });
             const width = p.type === 'actor' ? 30 : participantWidth;
             const height = p.type === 'actor' ? 60 : 40;
@@ -877,7 +893,7 @@ class DrawioGenerator {
             // Lifeline - vertical dashed line using edge
             const lifelineHeight = 100 + this.data.messages.length * messageSpacing;
             const lifelineX = x + participantWidth/2;
-            xml += this.createEdgeWithPoints(this.cellId++, '', 'strokeColor=#999999;dashed=1;strokeWidth=1;endArrow=none;', lifelineX, y + height, lifelineX, y + height + lifelineHeight);
+            xml += this.createEdgeWithPoints(this.nextId(), '', 'strokeColor=#999999;dashed=1;strokeWidth=1;endArrow=none;', lifelineX, y + height, lifelineX, y + height + lifelineHeight);
         });
 
         // Groups (== Title ==) - horizontal separator lines with labels
@@ -885,9 +901,9 @@ class DrawioGenerator {
             for (const group of this.data.groups) {
                 const groupY = 100 + group.startIndex * messageSpacing;
                 // Horizontal line spanning all participants
-                xml += this.createVertex(this.cellId++, '', 'strokeWidth=1;fillColor=none;strokeColor=#999999;', 30, groupY, totalWidth, 1);
+                xml += this.createVertex(this.nextId(), '', 'strokeWidth=1;fillColor=none;strokeColor=#999999;', 30, groupY, totalWidth, 1);
                 // Label for the separator
-                xml += this.createVertex(this.cellId++, group.label, 'text;strokeColor=none;fillColor=#e1d5e7;align=center;verticalAlign=middle;fontStyle=1;fontSize=11;', totalWidth/2 - 60, groupY - 12, 120, 24);
+                xml += this.createVertex(this.nextId(), group.label, 'text;strokeColor=none;fillColor=#e1d5e7;align=center;verticalAlign=middle;fontStyle=1;fontSize=11;', totalWidth/2 - 60, groupY - 12, 120, 24);
             }
         }
 
@@ -898,7 +914,7 @@ class DrawioGenerator {
             const toPos = this.nodePositions.get(msg.to);
             if (!fromPos || !toPos) continue;
             const style = msg.isDashed ? 'endArrow=open;strokeColor=#666666;endFill=0;rounded=0;dashed=1;' : 'endArrow=block;strokeColor=#333333;endFill=1;rounded=0;';
-            xml += this.createEdgeWithPoints(this.cellId++, msg.text, style, fromPos.x, msgY, toPos.x, msgY);
+            xml += this.createEdgeWithPoints(this.nextId(), msg.text, style, fromPos.x, msgY, toPos.x, msgY);
             msgY += messageSpacing;
         }
         return xml;
@@ -912,7 +928,7 @@ class DrawioGenerator {
         let count = 0;
 
         for (const state of this.data.states) {
-            const id = this.cellId++;
+            const id = this.nextId();
             this.nodePositions.set(state.name, { id, x, y });
             let style, width, height;
             if (state.type === 'start') {
@@ -928,7 +944,7 @@ class DrawioGenerator {
             }
             xml += this.createVertex(id, state.label, style, x, y, width, height);
             if (state.note) {
-                xml += this.createVertex(this.cellId++, state.note, 'shape=note;whiteSpace=wrap;size=17;fillColor=#fff2cc;strokeColor=#d6b656;', x + width + 10, y, 120, 60);
+                xml += this.createVertex(this.nextId(), state.note, 'shape=note;whiteSpace=wrap;size=17;fillColor=#fff2cc;strokeColor=#d6b656;', x + width + 10, y, 120, 60);
             }
             count++;
             if (count % 4 === 0) { x = 100; y += 100; } else { x += spacing; }
@@ -940,7 +956,7 @@ class DrawioGenerator {
             let source = this.nodePositions.get(fromKey) || this.nodePositions.get(trans.from);
             let target = this.nodePositions.get(toKey) || this.nodePositions.get(trans.to);
             if (!source || !target) continue;
-            xml += this.createEdge(this.cellId++, trans.label, 'endArrow=classic;strokeColor=#333333;rounded=0;', source.id, target.id);
+            xml += this.createEdge(this.nextId(), trans.label, 'endArrow=classic;strokeColor=#333333;rounded=0;', source.id, target.id);
         }
         return xml;
     }
@@ -957,7 +973,7 @@ class DrawioGenerator {
         if (this.data.rectangles?.length > 0) {
             for (const rect of this.data.rectangles) {
                 const height = Math.max(200, rect.usecases.length * usecaseSpacing + 50);
-                xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(rect.label)}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;verticalAlign=top;fontStyle=1;spacingTop=5;" vertex="1" parent="1">
+                xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(rect.label)}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;verticalAlign=top;fontStyle=1;spacingTop=5;" vertex="1" parent="1">
           <mxGeometry x="250" y="30" width="300" height="${height}" as="geometry"/>
         </mxCell>\n`;
             }
@@ -965,7 +981,7 @@ class DrawioGenerator {
 
         // Actors
         for (const actor of this.data.actors) {
-            const id = this.cellId++;
+            const id = this.nextId();
             this.nodePositions.set(actor.name, { id, x: actorX + 15, y: actorY + 30 });
             xml += `        <mxCell id="${id}" value="${this.escapeXml(actor.label)}" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
           <mxGeometry x="${actorX}" y="${actorY}" width="30" height="60" as="geometry"/>
@@ -975,7 +991,7 @@ class DrawioGenerator {
 
         // Usecases
         for (const uc of this.data.usecases) {
-            const id = this.cellId++;
+            const id = this.nextId();
             this.nodePositions.set(uc.name, { id, x: usecaseX + 60, y: usecaseY + 25 });
             xml += `        <mxCell id="${id}" value="${this.escapeXml(uc.label)}" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="${usecaseX}" y="${usecaseY}" width="120" height="50" as="geometry"/>
@@ -988,7 +1004,7 @@ class DrawioGenerator {
             const source = this.nodePositions.get(rel.from);
             const target = this.nodePositions.get(rel.to);
             if (!source || !target) continue;
-            xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(rel.label || '')}" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1">
+            xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(rel.label || '')}" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="${source.x}" y="${source.y}" as="sourcePoint"/>
             <mxPoint x="${target.x}" y="${target.y}" as="targetPoint"/>
@@ -1007,7 +1023,7 @@ class DrawioGenerator {
         let rightY = centerY - 100, leftY = centerY - 100;
 
         for (const node of this.data.mindmap) {
-            const id = this.cellId++;
+            const id = this.nextId();
             let x, y, width = Math.max(100, node.text.length * 8 + 20);
             if (node.level === 1) { x = centerX - width/2; y = centerY - nodeHeight/2; }
             else {
@@ -1024,7 +1040,7 @@ class DrawioGenerator {
             if (node.parent !== null) {
                 const parentPos = this.nodePositions.get(node.parent);
                 if (parentPos) {
-                    xml += `        <mxCell id="${this.cellId++}" value="" style="endArrow=none;html=1;rounded=1;curved=1;strokeColor=#666666;" edge="1" parent="1" source="${parentPos.id}" target="${id}">
+                    xml += `        <mxCell id="${this.nextId()}" value="" style="endArrow=none;html=1;rounded=1;curved=1;strokeColor=#666666;" edge="1" parent="1" source="${parentPos.id}" target="${id}">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>\n`;
                 }
@@ -1041,7 +1057,7 @@ class DrawioGenerator {
         let count = 0;
 
         for (const entity of this.data.entities) {
-            const id = this.cellId++;
+            const id = this.nextId();
             const height = 30 + entity.attributes.length * 20;
             const width = 180;
             this.nodePositions.set(entity.name, { id, x: x + width/2, y: y + height/2 });
@@ -1050,7 +1066,7 @@ class DrawioGenerator {
         </mxCell>\n`;
             let attrY = 26;
             for (const attr of entity.attributes) {
-                const attrId = this.cellId++;
+                const attrId = this.nextId();
                 const prefix = attr.isPrimaryKey ? 'PK ' : '';
                 const style = attr.isPrimaryKey ? 'text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=4;' : 'text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;';
                 xml += `        <mxCell id="${attrId}" value="${this.escapeXml(prefix + attr.name + (attr.type ? ': ' + attr.type : ''))}" style="${style}" vertex="1" parent="${id}">
@@ -1066,7 +1082,7 @@ class DrawioGenerator {
             const source = this.nodePositions.get(rel.from);
             const target = this.nodePositions.get(rel.to);
             if (!source || !target) continue;
-            xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(rel.label)}" style="endArrow=ERone;startArrow=ERmany;html=1;rounded=0;" edge="1" parent="1">
+            xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(rel.label)}" style="endArrow=ERone;startArrow=ERmany;html=1;rounded=0;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="${source.x + 90}" y="${source.y}" as="sourcePoint"/>
             <mxPoint x="${target.x - 90}" y="${target.y}" as="targetPoint"/>
@@ -1084,7 +1100,7 @@ class DrawioGenerator {
         let count = 0;
 
         for (const node of this.data.deployments) {
-            const id = this.cellId++;
+            const id = this.nextId();
             let style, width = 120, height = 80;
             switch (node.type) {
                 case 'database': style = 'shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;'; break;
@@ -1105,7 +1121,7 @@ class DrawioGenerator {
             const target = this.nodePositions.get(conn.to);
             if (!source || !target) continue;
             const style = conn.isDashed ? 'endArrow=classic;html=1;rounded=0;dashed=1;' : 'endArrow=classic;html=1;rounded=0;';
-            xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(conn.label)}" style="${style}" edge="1" parent="1" source="${source.id}" target="${target.id}">
+            xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(conn.label)}" style="${style}" edge="1" parent="1" source="${source.id}" target="${target.id}">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>\n`;
         }
@@ -1120,7 +1136,7 @@ class DrawioGenerator {
         let count = 0;
         
         for (const cls of this.data.classes) {
-            const id = this.cellId++;
+            const id = this.nextId();
             this.nodePositions.set(cls.name, { id, x, y });
             const height = 60 + (cls.attributes.length + cls.methods.length) * 20;
             const width = 160;
@@ -1131,20 +1147,20 @@ class DrawioGenerator {
         </mxCell>\n`;
             let memberY = 26;
             for (const attr of cls.attributes) {
-                const attrId = this.cellId++;
+                const attrId = this.nextId();
                 xml += `        <mxCell id="${attrId}" value="${this.escapeXml(attr.visibility + ' ' + attr.name + (attr.type ? ': ' + attr.type : ''))}" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="${id}">
           <mxGeometry y="${memberY}" width="${width}" height="20" as="geometry"/>
         </mxCell>\n`;
                 memberY += 20;
             }
             if (cls.attributes.length > 0 && cls.methods.length > 0) {
-                xml += `        <mxCell id="${this.cellId++}" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;" vertex="1" parent="${id}">
+                xml += `        <mxCell id="${this.nextId()}" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;" vertex="1" parent="${id}">
           <mxGeometry y="${memberY}" width="${width}" height="8" as="geometry"/>
         </mxCell>\n`;
                 memberY += 8;
             }
             for (const method of cls.methods) {
-                xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(method.visibility + ' ' + method.name + (method.type ? ': ' + method.type : ''))}" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="${id}">
+                xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(method.visibility + ' ' + method.name + (method.type ? ': ' + method.type : ''))}" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="${id}">
           <mxGeometry y="${memberY}" width="${width}" height="20" as="geometry"/>
         </mxCell>\n`;
                 memberY += 20;
@@ -1154,7 +1170,7 @@ class DrawioGenerator {
         }
         
         for (const actor of this.data.actors) {
-            const id = this.cellId++;
+            const id = this.nextId();
             this.nodePositions.set(actor.name, { id, x, y });
             xml += `        <mxCell id="${id}" value="${this.escapeXml(actor.label)}" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
           <mxGeometry x="${x}" y="${y}" width="30" height="60" as="geometry"/>
@@ -1179,7 +1195,7 @@ class DrawioGenerator {
             const source = this.nodePositions.get(rel.from);
             const target = this.nodePositions.get(rel.to);
             if (!source || !target) continue;
-            xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(rel.label || '')}" style="${styles[rel.type] || styles['association']}" edge="1" parent="1" source="${source.id}" target="${target.id}">
+            xml += `        <mxCell id="${this.nextId()}" value="${this.escapeXml(rel.label || '')}" style="${styles[rel.type] || styles['association']}" edge="1" parent="1" source="${source.id}" target="${target.id}">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>\n`;
         }
