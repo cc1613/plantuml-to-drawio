@@ -862,28 +862,35 @@ class DrawioGenerator {
         const participantWidth = 100;
         const participantSpacing = 150;
         const messageSpacing = 50;
+        const totalWidth = 50 + this.data.participants.length * participantSpacing;
         let y = 40;
 
+        // Participants (rectangles at top)
         this.data.participants.forEach((p, index) => {
             const x = 50 + index * participantSpacing;
             const id = this.cellId++;
             this.nodePositions.set(p.name, { id, x: x + participantWidth/2, topY: y });
-            const style = p.type === 'actor' ? 'shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;' : 'rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;';
             const width = p.type === 'actor' ? 30 : participantWidth;
             const height = p.type === 'actor' ? 60 : 40;
+            const style = p.type === 'actor' ? 'shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;' : '';
             xml += this.createVertex(id, p.label, style, x + (participantWidth - width)/2, y, width, height);
-            const lifelineHeight = 50 + this.data.messages.length * messageSpacing;
-            xml += this.createVertex(this.cellId++, '', 'line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#666666;dashed=1;', x + participantWidth/2, y + height, 1, lifelineHeight);
+            // Lifeline - vertical dashed line below participant
+            const lifelineHeight = 100 + this.data.messages.length * messageSpacing;
+            xml += this.createVertex(this.cellId++, '', 'line;strokeWidth=1;fillColor=none;strokeColor=#666666;dashed=1;', x + participantWidth/2, y + height, 1, lifelineHeight);
         });
 
-        // Groups
+        // Groups (== Title ==) - horizontal separator lines with labels
         if (this.data.groups?.length > 0) {
             for (const group of this.data.groups) {
                 const groupY = 100 + group.startIndex * messageSpacing;
-                xml += this.createVertex(this.cellId++, group.label, 'shape=rectangle;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;verticalAlign=top;fontStyle=1;', 30, groupY, this.data.participants.length * participantSpacing, 40);
+                // Horizontal line spanning all participants
+                xml += this.createVertex(this.cellId++, '', 'line;strokeWidth=2;fillColor=none;strokeColor=#000000;', 30, groupY, totalWidth, 1);
+                // Label for the separator
+                xml += this.createVertex(this.cellId++, group.label, 'text;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;', totalWidth/2 - 50, groupY - 15, 100, 30);
             }
         }
 
+        // Messages (arrows between participants)
         let msgY = 120;
         for (const msg of this.data.messages) {
             const fromPos = this.nodePositions.get(msg.from);
