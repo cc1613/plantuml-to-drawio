@@ -721,19 +721,19 @@ class DrawioGenerator {
         this.cellId = 2;
     }
 
-    // Helper: create vertex mxCell with correct attribute order
+    // Helper: create vertex mxCell with correct attribute order (matching draw.io export)
     createVertex(id, value, style, x, y, width, height, parent = "1") {
-        return `<mxCell id="${id}" parent="${parent}" style="${style}" value="${this.escapeXml(value)}" vertex="1"><mxGeometry height="${height}" width="${width}" x="${x}" y="${y}" as="geometry"/></mxCell>`;
+        return `<mxCell id="${id}" parent="${parent}" style="${style}" value="${this.escapeXml(value)}" vertex="1"><mxGeometry height="${height}" width="${width}" x="${x}" y="${y}" as="geometry" /></mxCell>`;
     }
 
     // Helper: create edge mxCell with source/target
     createEdge(id, value, style, sourceId, targetId, parent = "1") {
-        return `<mxCell id="${id}" edge="1" parent="${parent}" source="${sourceId}" style="${style}" target="${targetId}" value="${this.escapeXml(value)}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
+        return `<mxCell id="${id}" edge="1" parent="${parent}" source="${sourceId}" style="${style}" target="${targetId}" value="${this.escapeXml(value)}"><mxGeometry relative="1" as="geometry" /></mxCell>`;
     }
 
     // Helper: create edge with points (no source/target connection)
     createEdgeWithPoints(id, value, style, sourceX, sourceY, targetX, targetY, parent = "1") {
-        return `<mxCell id="${id}" edge="1" parent="${parent}" style="${style}" value="${this.escapeXml(value)}"><mxGeometry relative="1" as="geometry"><mxPoint x="${sourceX}" y="${sourceY}" as="sourcePoint"/><mxPoint x="${targetX}" y="${targetY}" as="targetPoint"/></mxGeometry></mxCell>`;
+        return `<mxCell id="${id}" edge="1" parent="${parent}" style="${style}" value="${this.escapeXml(value)}"><mxGeometry relative="1" as="geometry"><mxPoint x="${sourceX}" y="${sourceY}" as="sourcePoint" /><mxPoint x="${targetX}" y="${targetY}" as="targetPoint" /></mxGeometry></mxCell>`;
     }
 
     generate(compressed = false) {
@@ -1194,7 +1194,7 @@ class DrawioGenerator {
         const timestamp = new Date().toISOString();
         // Remove extra whitespace from content to create cleaner XML
         const cleanContent = content.replace(/\n\s*/g, '').trim();
-        const mxGraphModel = `<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cleanContent}</root></mxGraphModel>`;
+        const mxGraphModel = `<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" background="none" math="0" shadow="0"><root><mxCell id="0" /><mxCell id="1" parent="0" />${cleanContent}</root></mxGraphModel>`;
         
         if (compressed) {
             // Compressed format for better compatibility
