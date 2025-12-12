@@ -872,11 +872,11 @@ class DrawioGenerator {
             this.nodePositions.set(p.name, { id, x: x + participantWidth/2, topY: y });
             const width = p.type === 'actor' ? 30 : participantWidth;
             const height = p.type === 'actor' ? 60 : 40;
-            const style = p.type === 'actor' ? 'shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;' : '';
+            const style = p.type === 'actor' ? 'shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;' : 'fillColor=#dae8fc;strokeColor=#6c8ebf;';
             xml += this.createVertex(id, p.label, style, x + (participantWidth - width)/2, y, width, height);
-            // Lifeline - thin vertical rectangle with dashed border (like draw.io example)
+            // Lifeline - thin vertical dashed line
             const lifelineHeight = 100 + this.data.messages.length * messageSpacing;
-            xml += this.createVertex(this.cellId++, '', 'whiteSpace=wrap;strokeColor=#FF0000;fillColor=#FF0000;', x + participantWidth/2 - 2, y + height, 5, lifelineHeight);
+            xml += this.createVertex(this.cellId++, '', 'strokeColor=#999999;fillColor=none;dashed=1;strokeWidth=1;', x + participantWidth/2 - 1, y + height, 2, lifelineHeight);
         });
 
         // Groups (== Title ==) - horizontal separator lines with labels
@@ -884,9 +884,9 @@ class DrawioGenerator {
             for (const group of this.data.groups) {
                 const groupY = 100 + group.startIndex * messageSpacing;
                 // Horizontal line spanning all participants
-                xml += this.createVertex(this.cellId++, '', 'line;strokeWidth=2;fillColor=none;strokeColor=#000000;', 30, groupY, totalWidth, 1);
+                xml += this.createVertex(this.cellId++, '', 'strokeWidth=1;fillColor=none;strokeColor=#999999;', 30, groupY, totalWidth, 1);
                 // Label for the separator
-                xml += this.createVertex(this.cellId++, group.label, 'text;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;', totalWidth/2 - 50, groupY - 15, 100, 30);
+                xml += this.createVertex(this.cellId++, group.label, 'text;strokeColor=none;fillColor=#e1d5e7;align=center;verticalAlign=middle;fontStyle=1;fontSize=11;', totalWidth/2 - 60, groupY - 12, 120, 24);
             }
         }
 
@@ -896,7 +896,7 @@ class DrawioGenerator {
             const fromPos = this.nodePositions.get(msg.from);
             const toPos = this.nodePositions.get(msg.to);
             if (!fromPos || !toPos) continue;
-            const style = msg.isDashed ? 'endArrow=open;strokeColor=#FF0000;endFill=1;rounded=0;dashed=1;' : 'endArrow=open;strokeColor=#FF0000;endFill=1;rounded=0;';
+            const style = msg.isDashed ? 'endArrow=open;strokeColor=#666666;endFill=0;rounded=0;dashed=1;' : 'endArrow=block;strokeColor=#333333;endFill=1;rounded=0;';
             xml += this.createEdgeWithPoints(this.cellId++, msg.text, style, fromPos.x, msgY, toPos.x, msgY);
             msgY += messageSpacing;
         }
@@ -915,13 +915,13 @@ class DrawioGenerator {
             this.nodePositions.set(state.name, { id, x, y });
             let style, width, height;
             if (state.type === 'start') {
-                style = 'ellipse;shape=startState;fillColor=#000000;strokeColor=#ff0000;';
+                style = 'ellipse;fillColor=#000000;strokeColor=#000000;';
                 width = height = 30;
             } else if (state.type === 'end') {
-                style = 'ellipse;shape=endState;fillColor=#000000;strokeColor=#ff0000;';
+                style = 'ellipse;fillColor=#000000;strokeColor=#000000;strokeWidth=3;';
                 width = height = 30;
             } else {
-                style = 'whiteSpace=wrap;';
+                style = 'rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;';
                 width = Math.max(120, state.label.length * 8 + 20);
                 height = 50;
             }
@@ -939,7 +939,7 @@ class DrawioGenerator {
             let source = this.nodePositions.get(fromKey) || this.nodePositions.get(trans.from);
             let target = this.nodePositions.get(toKey) || this.nodePositions.get(trans.to);
             if (!source || !target) continue;
-            xml += this.createEdge(this.cellId++, trans.label, 'endArrow=open;strokeColor=#FF0000;endFill=1;rounded=0;', source.id, target.id);
+            xml += this.createEdge(this.cellId++, trans.label, 'endArrow=classic;strokeColor=#333333;rounded=0;', source.id, target.id);
         }
         return xml;
     }
