@@ -874,9 +874,9 @@ class DrawioGenerator {
             const height = p.type === 'actor' ? 60 : 40;
             const style = p.type === 'actor' ? 'shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;' : '';
             xml += this.createVertex(id, p.label, style, x + (participantWidth - width)/2, y, width, height);
-            // Lifeline - vertical dashed line below participant
+            // Lifeline - thin vertical rectangle with dashed border (like draw.io example)
             const lifelineHeight = 100 + this.data.messages.length * messageSpacing;
-            xml += this.createVertex(this.cellId++, '', 'line;strokeWidth=1;fillColor=none;strokeColor=#666666;dashed=1;', x + participantWidth/2, y + height, 1, lifelineHeight);
+            xml += this.createVertex(this.cellId++, '', 'whiteSpace=wrap;strokeColor=#FF0000;fillColor=#FF0000;', x + participantWidth/2 - 2, y + height, 5, lifelineHeight);
         });
 
         // Groups (== Title ==) - horizontal separator lines with labels
