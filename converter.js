@@ -881,8 +881,9 @@ class DrawioGenerator {
             const toPos = this.nodePositions.get(msg.to);
             if (!fromPos || !toPos) continue;
             const style = msg.isDashed ? 'endArrow=open;html=1;rounded=0;dashed=1;' : 'endArrow=block;html=1;rounded=0;endFill=1;';
-            xml += `        <mxCell id="${this.cellId++}" value="${this.escapeXml(msg.text)}" style="${style}" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
+            const edgeId = this.cellId++;
+            xml += `        <mxCell id="${edgeId}" value="${this.escapeXml(msg.text)}" style="${style}" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
             <mxPoint x="${fromPos.x}" y="${msgY}" as="sourcePoint"/>
             <mxPoint x="${toPos.x}" y="${msgY}" as="targetPoint"/>
           </mxGeometry>
@@ -1190,7 +1191,9 @@ class DrawioGenerator {
 
     wrapInDrawioFormat(content, compressed = false) {
         const timestamp = new Date().toISOString();
-        const mxGraphModel = `<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0"><root><mxCell id="0" /><mxCell id="1" parent="0" />${content}</root></mxGraphModel>`;
+        // Remove extra whitespace from content to create cleaner XML
+        const cleanContent = content.replace(/\n\s*/g, '').trim();
+        const mxGraphModel = `<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cleanContent}</root></mxGraphModel>`;
         
         if (compressed) {
             // Compressed format for better compatibility
@@ -1201,16 +1204,11 @@ class DrawioGenerator {
 </mxfile>`;
         }
         
-        // Uncompressed format
+        // Uncompressed format - no extra whitespace
         return `<?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" modified="${timestamp}" agent="Mozilla/5.0" etag="plantuml2drawio" version="21.6.5" type="device">
   <diagram id="diagram-1" name="Page-1">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-${content}      </root>
-    </mxGraphModel>
+    ${mxGraphModel}
   </diagram>
 </mxfile>`;
     }
