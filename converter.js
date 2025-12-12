@@ -721,7 +721,7 @@ class DrawioGenerator {
         this.cellId = 2;
     }
 
-    generate() {
+    generate(compressed = false) {
         let xml = '';
         switch (this.data.type) {
             case 'activity': xml = this.generateActivityDiagram(); break;
@@ -733,7 +733,7 @@ class DrawioGenerator {
             case 'usecase': xml = this.generateUseCaseDiagram(); break;
             default: xml = this.generateNodes() + this.generateEdges();
         }
-        return this.wrapInDrawioFormat(xml);
+        return this.wrapInDrawioFormat(xml, compressed);
     }
 
     // ==================== Activity Diagram ====================
@@ -1188,9 +1188,20 @@ class DrawioGenerator {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
     }
 
-    wrapInDrawioFormat(content) {
-        // Use standard draw.io format for better compatibility with Feishu/Lark
+    wrapInDrawioFormat(content, compressed = false) {
         const timestamp = new Date().toISOString();
+        const mxGraphModel = `<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0"><root><mxCell id="0" /><mxCell id="1" parent="0" />${content}</root></mxGraphModel>`;
+        
+        if (compressed) {
+            // Compressed format for better compatibility
+            const encodedContent = this.compressAndEncode(mxGraphModel);
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="${timestamp}" agent="Mozilla/5.0" etag="plantuml2drawio" version="21.6.5" type="device">
+  <diagram id="diagram-1" name="Page-1">${encodedContent}</diagram>
+</mxfile>`;
+        }
+        
+        // Uncompressed format
         return `<?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" modified="${timestamp}" agent="Mozilla/5.0" etag="plantuml2drawio" version="21.6.5" type="device">
   <diagram id="diagram-1" name="Page-1">
@@ -1202,6 +1213,20 @@ ${content}      </root>
     </mxGraphModel>
   </diagram>
 </mxfile>`;
+    }
+
+    compressAndEncode(data) {
+        // Use pako for deflate compression if available, otherwise return base64
+        try {
+            if (typeof pako !== 'undefined') {
+                const compressed = pako.deflateRaw(encodeURIComponent(data));
+                return btoa(String.fromCharCode.apply(null, compressed));
+            }
+        } catch (e) {
+            console.warn('Compression failed, using uncompressed format');
+        }
+        // Fallback: just encode without compression
+        return btoa(unescape(encodeURIComponent(data)));
     }
 }
 
@@ -1485,17 +1510,27 @@ function convert() {
     } catch (error) { showStatus('Error: ' + error.message, 'error'); console.error(error); }
 }
 
-function downloadDrawio() {
-    const output = document.getElementById('drawio-output').value;
-    if (!output) { showStatus('Please convert PlantUML first', 'error'); return; }
-    const blob = new Blob([output], { type: 'application/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'diagram.drawio';
-    a.click();
-    URL.revokeObjectURL(url);
-    showStatus('File downloaded!', 'success');
+function downloadDrawio(compressed = false) {
+    const input = document.getElementById('plantuml-input').value.trim();
+    if (!input) { showStatus('Please convert PlantUML first', 'error'); return; }
+    
+    try {
+        const parser = new PlantUMLParser(input);
+        const parsed = parser.parse();
+        const generator = new DrawioGenerator(parsed);
+        const output = generator.generate(compressed);
+        
+        const blob = new Blob([output], { type: 'application/xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = compressed ? 'diagram_feishu.drawio' : 'diagram.drawio';
+        a.click();
+        URL.revokeObjectURL(url);
+        showStatus(compressed ? 'Feishu compatible file downloaded!' : 'File downloaded!', 'success');
+    } catch (error) {
+        showStatus('Error: ' + error.message, 'error');
+    }
 }
 
 function copyOutput() { document.getElementById('drawio-output').select(); document.execCommand('copy'); showStatus('Copied to clipboard!', 'success'); }

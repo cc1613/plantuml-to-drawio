@@ -254,7 +254,8 @@ User --> Order : creates
             </div>
             <div class="actions">
                 <button class="btn btn-primary" onclick="convert()">Convert to Draw.io</button>
-                <button class="btn btn-success" onclick="downloadDrawio()">Download .drawio File</button>
+                <button class="btn btn-success" onclick="downloadDrawio(false)">Download .drawio</button>
+                <button class="btn btn-success" onclick="downloadDrawio(true)">Download (Feishu Compatible)</button>
                 <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
             </div>
             <div id="status" class="status"></div>
@@ -265,6 +266,7 @@ User --> Order : creates
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="converter.js"></script>
 </body>
 </html>
