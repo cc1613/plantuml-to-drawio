@@ -1,0 +1,76 @@
+@startuml 订单全生命周期
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam ActivityBackgroundColor #E3F2FD
+skinparam ActivityBorderColor #1976D2
+skinparam ActivityDiamondBackgroundColor #FFF3E0
+skinparam ActivityDiamondBorderColor #F57C00
+
+title 初喜白酒定制 - 订单全生命周期流程图
+
+|C端用户|
+start
+:选择商品;
+:上传定制素材;
+:确认下单;
+
+|#AntiqueWhite|B端后台|
+if (支付方式?) then (全款支付)
+  :待支付;
+  :支付全款;
+  :待审核;
+else (定金支付)
+  :待支付;
+  :支付定金;
+  :待支付尾款;
+  :支付尾款;
+  :待审核;
+endif
+
+partition 审核环节 {
+  if (审核结果?) then (通过)
+    :待分配;
+  else (驳回)
+    :待修改;
+    |C端用户|
+    :客户修改内容;
+    |B端后台|
+    :待审核;
+    note right: 重新审核
+  endif
+}
+
+partition 生产环节 {
+  :分配生产任务;
+  :生产中;
+  note right
+    生产阶段:
+    制作中→质检中→打包中
+  end note
+  
+  if (质检结果?) then (合格)
+    :打包完成;
+  else (不合格)
+    :返工;
+    note right: 回到制作中
+    :重新质检;
+  endif
+  :待发货;
+}
+
+partition 发货环节 {
+  :录入物流信息;
+  :确认发货;
+  :待签收;
+  
+  if (签收方式?) then (人工确认)
+    :确认签收;
+  else (自动确认)
+    :N天后自动签收;
+  endif
+}
+
+:已完成;
+stop
+
+@enduml
