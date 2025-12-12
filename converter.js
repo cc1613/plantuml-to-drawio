@@ -1189,13 +1189,15 @@ class DrawioGenerator {
     }
 
     wrapInDrawioFormat(content) {
+        // Use standard draw.io format for better compatibility with Feishu/Lark
+        const timestamp = new Date().toISOString();
         return `<?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="PlantUML-to-Drawio-Converter" modified="${new Date().toISOString()}" agent="PlantUML-Converter" version="1.0">
-  <diagram name="Page-1" id="diagram-1">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+<mxfile host="app.diagrams.net" modified="${timestamp}" agent="Mozilla/5.0" etag="plantuml2drawio" version="21.6.5" type="device">
+  <diagram id="diagram-1" name="Page-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
-        <mxCell id="0"/>
-        <mxCell id="1" parent="0"/>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
 ${content}      </root>
     </mxGraphModel>
   </diagram>
