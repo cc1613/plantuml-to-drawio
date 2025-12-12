@@ -874,9 +874,10 @@ class DrawioGenerator {
             const height = p.type === 'actor' ? 60 : 40;
             const style = p.type === 'actor' ? 'shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;' : 'fillColor=#dae8fc;strokeColor=#6c8ebf;';
             xml += this.createVertex(id, p.label, style, x + (participantWidth - width)/2, y, width, height);
-            // Lifeline - single vertical dashed line
+            // Lifeline - vertical dashed line using edge
             const lifelineHeight = 100 + this.data.messages.length * messageSpacing;
-            xml += this.createVertex(this.cellId++, '', 'strokeColor=#999999;fillColor=none;dashed=1;strokeWidth=1;', x + participantWidth/2, y + height, 0, lifelineHeight);
+            const lifelineX = x + participantWidth/2;
+            xml += this.createEdgeWithPoints(this.cellId++, '', 'strokeColor=#999999;dashed=1;strokeWidth=1;endArrow=none;', lifelineX, y + height, lifelineX, y + height + lifelineHeight);
         });
 
         // Groups (== Title ==) - horizontal separator lines with labels
