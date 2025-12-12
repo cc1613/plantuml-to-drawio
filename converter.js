@@ -40,16 +40,18 @@ class PlantUMLParser {
         const input = this.input.toLowerCase();
         const rawInput = this.input;
         
-        // Check for usecase diagram - actor with usecase or rectangle
-        if ((input.includes('actor ') && (input.includes('usecase ') || input.includes('rectangle '))) ||
-            (input.includes('actor ') && lines.some(l => /--?>/.test(l)))) {
-            return 'usecase';
+        // Check for sequence diagram FIRST - has participant or actor with -> messages
+        // Key: sequence diagrams have "A -> B : message" pattern
+        if (lines.some(l => /^[\w"]+\s*-+>+\s*[\w"]+\s*:/.test(l)) ||
+            (input.includes('participant ') && input.includes(' -> ')) ||
+            (input.includes('actor ') && input.includes(' -> ') && lines.some(l => /^\w+\s*-+>\s*\w+\s*:/.test(l)))) {
+            return 'sequence';
         }
         
-        // Check for sequence diagram
-        if (lines.some(l => /^(\w+|"[^"]+")\s*-+>+\s*(\w+|"[^"]+")\s*:/.test(l)) ||
-            (input.includes('participant ') && input.includes(' -> '))) {
-            return 'sequence';
+        // Check for usecase diagram - actor with usecase or rectangle (but NOT sequence messages)
+        if ((input.includes('actor ') && (input.includes('usecase ') || input.includes('rectangle '))) &&
+            !lines.some(l => /^\w+\s*-+>\s*\w+\s*:/.test(l))) {
+            return 'usecase';
         }
         
         // Check for activity diagram  
