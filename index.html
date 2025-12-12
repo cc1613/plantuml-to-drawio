@@ -112,6 +112,45 @@
             font-size: 12px;
             padding: 5px 10px;
         }
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .example-buttons .btn {
+            font-size: 11px;
+            padding: 4px 8px;
+        }
+        .supported-types {
+            grid-column: 1 / -1;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .supported-types h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .type-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .type-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .type-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
         .status {
             text-align: center;
             padding: 10px;
@@ -173,10 +212,21 @@
     <div class="container">
         <h1>PlantUML to Draw.io Converter</h1>
         <div class="converter">
+            <div class="supported-types">
+                <h3>Supported Diagram Types (click to load example)</h3>
+                <div class="type-badges">
+                    <span class="type-badge" onclick="loadExample('class')">Class Diagram</span>
+                    <span class="type-badge" onclick="loadExample('sequence')">Sequence Diagram</span>
+                    <span class="type-badge" onclick="loadExample('activity')">Activity Diagram</span>
+                    <span class="type-badge" onclick="loadExample('state')">State Diagram</span>
+                    <span class="type-badge" onclick="loadExample('mindmap')">Mind Map</span>
+                    <span class="type-badge" onclick="loadExample('er')">ER Diagram</span>
+                    <span class="type-badge" onclick="loadExample('deployment')">Deployment Diagram</span>
+                </div>
+            </div>
             <div class="panel">
                 <div class="panel-header">
                     <h2>PlantUML Input</h2>
-                    <button class="btn btn-secondary example-btn" onclick="loadExample()">Load Example</button>
                 </div>
                 <textarea id="plantuml-input" placeholder="@startuml
 class User {
