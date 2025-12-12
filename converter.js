@@ -8,11 +8,19 @@ class PlantUMLParser {
         this.components = [];
         this.nodes = [];
         this.notes = [];
+        this.activities = [];
         this.diagramType = 'class';
     }
 
     parse() {
         const lines = this.input.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith("'"));
+        
+        // Detect activity diagram
+        if (this.input.includes('start') && (this.input.includes('stop') || this.input.includes('end')) && 
+            (this.input.includes(':') || this.input.includes('if ('))) {
+            this.diagramType = 'activity';
+            return this.parseActivityDiagram(lines);
+        }
         
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -97,7 +105,121 @@ class PlantUMLParser {
             usecases: this.usecases,
             components: this.components,
             nodes: this.nodes,
-            notes: this.notes
+            notes: this.notes,
+            activities: this.activities
+        };
+    }
+
+    parseActivityDiagram(lines) {
+        const activities = [];
+        const edges = [];
+        let nodeId = 0;
+        let stack = []; // Stack for tracking conditional branches
+        let noteBuffer = [];
+        let inNote = false;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // Skip metadata
+            if (line.startsWith('@') || line.startsWith('!') || line.startsWith('skinparam') || 
+                line.startsWith('title') || line === '') continue;
+            
+            // Handle multi-line notes
+            if (line.startsWith('note ')) {
+                inNote = true;
+                noteBuffer = [line.replace(/note\s+(left|right|top|bottom)/, '').trim()];
+                continue;
+            }
+            if (line === 'end note') {
+                inNote = false;
+                const noteText = noteBuffer.join('\n').replace(/^\s+/gm, '');
+                if (activities.length > 0) {
+                    activities[activities.length - 1].note = noteText;
+                }
+                noteBuffer = [];
+                continue;
+            }
+            if (inNote) {
+                noteBuffer.push(line);
+                continue;
+            }
+            
+            // Start node
+            if (line === 'start') {
+                activities.push({ id: nodeId++, type: 'start', label: 'Start' });
+                continue;
+            }
+            
+            // Stop/End node
+            if (line === 'stop' || line === 'end') {
+                activities.push({ id: nodeId++, type: 'end', label: 'End' });
+                continue;
+            }
+            
+            // Activity :text;
+            const activityMatch = line.match(/^:(.+);$/);
+            if (activityMatch) {
+                activities.push({ id: nodeId++, type: 'action', label: activityMatch[1].trim() });
+                continue;
+            }
+            
+            // If condition
+            const ifMatch = line.match(/^if\s*\((.+)\)\s*then\s*\((.+)\)$/);
+            if (ifMatch) {
+                const conditionId = nodeId++;
+                activities.push({ 
+                    id: conditionId, 
+                    type: 'decision', 
+                    label: ifMatch[1].trim(),
+                    yesBranch: ifMatch[2].trim()
+                });
+                stack.push({ type: 'if', id: conditionId, hasElse: false });
+                continue;
+            }
+            
+            // Else branch
+            const elseMatch = line.match(/^else\s*\((.+)\)$/);
+            if (elseMatch && stack.length > 0) {
+                const current = stack[stack.length - 1];
+                current.hasElse = true;
+                current.noBranch = elseMatch[1].trim();
+                // Mark current position for else branch
+                current.elseStartIndex = activities.length;
+                continue;
+            }
+            
+            // Endif
+            if (line === 'endif') {
+                if (stack.length > 0) {
+                    const finished = stack.pop();
+                    // Add merge node
+                    activities.push({ id: nodeId++, type: 'merge', label: '', relatedDecision: finished.id });
+                }
+                continue;
+            }
+        }
+        
+        // Build edges based on sequence
+        for (let i = 0; i < activities.length - 1; i++) {
+            const current = activities[i];
+            const next = activities[i + 1];
+            
+            if (current.type !== 'merge') {
+                edges.push({ from: current.id, to: next.id, label: '' });
+            }
+        }
+        
+        return {
+            type: 'activity',
+            activities: activities,
+            relations: edges,
+            classes: [],
+            actors: [],
+            usecases: [],
+            components: [],
+            nodes: [],
+            notes: []
         };
     }
 
@@ -214,10 +336,96 @@ class DrawioGenerator {
     }
 
     generate() {
+        if (this.data.type === 'activity') {
+            return this.generateActivityDiagram();
+        }
         const nodes = this.generateNodes();
         const edges = this.generateEdges();
         
         return this.wrapInDrawioFormat(nodes + edges);
+    }
+
+    generateActivityDiagram() {
+        let xml = '';
+        let y = 40;
+        const x = 200;
+        const spacing = 80;
+        
+        for (const activity of this.data.activities) {
+            const id = this.cellId++;
+            this.nodePositions.set(activity.id, { id, x, y });
+            
+            switch (activity.type) {
+                case 'start':
+                    xml += `        <mxCell id="${id}" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="${x}" y="${y}" width="30" height="30" as="geometry"/>
+        </mxCell>\n`;
+                    y += 50;
+                    break;
+                    
+                case 'end':
+                    xml += `        <mxCell id="${id}" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="${x}" y="${y}" width="30" height="30" as="geometry"/>
+        </mxCell>\n`;
+                    const outerId = this.cellId++;
+                    xml += `        <mxCell id="${outerId}" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="${x - 5}" y="${y - 5}" width="40" height="40" as="geometry"/>
+        </mxCell>\n`;
+                    y += 60;
+                    break;
+                    
+                case 'action':
+                    const width = Math.max(140, activity.label.length * 8 + 20);
+                    xml += `        <mxCell id="${id}" value="${this.escapeXml(activity.label)}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="${x - width/2 + 15}" y="${y}" width="${width}" height="40" as="geometry"/>
+        </mxCell>\n`;
+                    
+                    // Add note if exists
+                    if (activity.note) {
+                        const noteId = this.cellId++;
+                        xml += `        <mxCell id="${noteId}" value="${this.escapeXml(activity.note)}" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#d6b656;size=14;align=left;spacingLeft=5;" vertex="1" parent="1">
+          <mxGeometry x="${x + width/2 + 40}" y="${y - 10}" width="160" height="80" as="geometry"/>
+        </mxCell>\n`;
+                    }
+                    y += spacing;
+                    break;
+                    
+                case 'decision':
+                    xml += `        <mxCell id="${id}" value="${this.escapeXml(activity.label)}" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="${x - 50 + 15}" y="${y}" width="100" height="60" as="geometry"/>
+        </mxCell>\n`;
+                    y += 90;
+                    break;
+                    
+                case 'merge':
+                    xml += `        <mxCell id="${id}" value="" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="${x - 15 + 15}" y="${y}" width="30" height="30" as="geometry"/>
+        </mxCell>\n`;
+                    y += 50;
+                    break;
+            }
+        }
+        
+        // Generate edges
+        for (const rel of this.data.relations) {
+            const source = this.nodePositions.get(rel.from);
+            const target = this.nodePositions.get(rel.to);
+            
+            if (source && target) {
+                const id = this.cellId++;
+                const sourceActivity = this.data.activities.find(a => a.id === rel.from);
+                let label = rel.label || '';
+                if (sourceActivity && sourceActivity.type === 'decision') {
+                    label = sourceActivity.yesBranch || '';
+                }
+                
+                xml += `        <mxCell id="${id}" value="${this.escapeXml(label)}" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="${source.id}" target="${target.id}">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>\n`;
+            }
+        }
+        
+        return this.wrapInDrawioFormat(xml);
     }
 
     generateNodes() {
@@ -412,6 +620,10 @@ class PreviewRenderer {
     }
 
     render() {
+        if (this.data.type === 'activity') {
+            return this.renderActivityDiagram();
+        }
+        
         let x = 50, y = 50;
         const spacing = 200;
         const maxPerRow = 3;
@@ -509,6 +721,85 @@ class PreviewRenderer {
     escapeXml(str) {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
+
+    renderActivityDiagram() {
+        let svgContent = '';
+        let y = 30;
+        const x = 200;
+        const spacing = 70;
+        
+        for (const activity of this.data.activities) {
+            this.nodePositions.set(activity.id, { x, y });
+            
+            switch (activity.type) {
+                case 'start':
+                    svgContent += `<circle cx="${x}" cy="${y}" r="15" fill="#333" stroke="#333" stroke-width="2"/>`;
+                    y += 50;
+                    break;
+                    
+                case 'end':
+                    svgContent += `<circle cx="${x}" cy="${y}" r="12" fill="#333" stroke="#333" stroke-width="2"/>`;
+                    svgContent += `<circle cx="${x}" cy="${y}" r="18" fill="none" stroke="#333" stroke-width="2"/>`;
+                    y += 50;
+                    break;
+                    
+                case 'action':
+                    const width = Math.max(120, activity.label.length * 7 + 20);
+                    svgContent += `<rect x="${x - width/2}" y="${y - 15}" width="${width}" height="30" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>`;
+                    svgContent += `<text x="${x}" y="${y + 5}" class="label" text-anchor="middle">${this.escapeXml(activity.label)}</text>`;
+                    
+                    if (activity.note) {
+                        svgContent += `<rect x="${x + width/2 + 20}" y="${y - 25}" width="140" height="60" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>`;
+                        const noteLines = activity.note.split('\n').slice(0, 3);
+                        noteLines.forEach((line, i) => {
+                            svgContent += `<text x="${x + width/2 + 28}" y="${y - 10 + i * 14}" font-size="10" fill="#666">${this.escapeXml(line.substring(0, 20))}</text>`;
+                        });
+                    }
+                    y += spacing;
+                    break;
+                    
+                case 'decision':
+                    svgContent += `<polygon points="${x},${y - 25} ${x + 40},${y} ${x},${y + 25} ${x - 40},${y}" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>`;
+                    svgContent += `<text x="${x}" y="${y + 4}" class="label" text-anchor="middle" font-size="10">${this.escapeXml(activity.label.substring(0, 15))}</text>`;
+                    y += spacing;
+                    break;
+                    
+                case 'merge':
+                    svgContent += `<polygon points="${x},${y - 10} ${x + 15},${y} ${x},${y + 10} ${x - 15},${y}" fill="#f5f5f5" stroke="#666" stroke-width="2"/>`;
+                    y += 40;
+                    break;
+            }
+        }
+        
+        // Draw edges
+        for (const rel of this.data.relations) {
+            const source = this.nodePositions.get(rel.from);
+            const target = this.nodePositions.get(rel.to);
+            
+            if (source && target) {
+                const sourceActivity = this.data.activities.find(a => a.id === rel.from);
+                let startY = source.y + 15;
+                if (sourceActivity) {
+                    if (sourceActivity.type === 'action') startY = source.y + 15;
+                    else if (sourceActivity.type === 'decision') startY = source.y + 25;
+                    else if (sourceActivity.type === 'merge') startY = source.y + 10;
+                }
+                
+                svgContent += `<line x1="${source.x}" y1="${startY}" x2="${target.x}" y2="${target.y - 15}" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>`;
+            }
+        }
+        
+        const maxY = Math.max(...Array.from(this.nodePositions.values()).map(p => p.y + 50), 200);
+        
+        return `<svg width="500" height="${maxY}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#666"/>
+                </marker>
+            </defs>
+            ${svgContent}
+        </svg>`;
+    }
 }
 
 // Main functions
@@ -529,7 +820,7 @@ function convert() {
         
         if (parsed.classes.length === 0 && parsed.actors.length === 0 && 
             parsed.usecases.length === 0 && parsed.components.length === 0 &&
-            parsed.nodes.length === 0) {
+            parsed.nodes.length === 0 && (!parsed.activities || parsed.activities.length === 0)) {
             showStatus('No valid elements found in PlantUML code', 'error');
             return;
         }
@@ -542,7 +833,8 @@ function convert() {
         previewEl.innerHTML = renderer.render();
         
         const totalElements = parsed.classes.length + parsed.actors.length + 
-                             parsed.usecases.length + parsed.components.length + parsed.nodes.length;
+                             parsed.usecases.length + parsed.components.length + parsed.nodes.length +
+                             (parsed.activities ? parsed.activities.length : 0);
         showStatus(`Successfully converted! Found ${totalElements} elements and ${parsed.relations.length} relations.`, 'success');
     } catch (error) {
         showStatus('Error: ' + error.message, 'error');
